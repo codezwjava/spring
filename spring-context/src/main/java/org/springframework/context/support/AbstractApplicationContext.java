@@ -532,30 +532,48 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			prepareBeanFactory(beanFactory);
 
 			try {
+				//这里需要知道BeanFactorPostProccessor这个知识点，B二胺如果实现了此接口，那么在容器
+				//初始化以后，Spring会负责调用里面的BeanFactorPostProccessor方法。
+
+				//一个类的创建分为两步，1.实例化->在内存中分配空间。2.初始化；2.1填充数据，2.2初始化
+				//这里是提供给子类的扩展，到这里的时候，所有的Bean已经都加载、注册、实例化完成了，但是还没有初始化
+				//具体的子类可以在这一步的时候添加一些特殊的BeanFactoryPostProccossor 的实现类。
 				// Allows post-processing of the bean factory in context subclasses.
 				postProcessBeanFactory(beanFactory);
 
+				//调用BeanFactoryPostProccessor各个实现类的postFactoryPostProccessor（factory）方法
 				// Invoke factory processors registered as beans in the context.
 				invokeBeanFactoryPostProcessors(beanFactory);
 
+				//注册beanPostProccessor的实现类，这和BeanFactoryPostProccessor是有区别的
+				//此接口两个方法：postProccessBeforInitialzation和postProccessAfterInitialzation
+				//这两个方法分别在Bean初始化之前和初始化之后执行。注意这里的bean还没有被初始化完成。
 				// Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
 
+				//国际化处理
 				// Initialize message source for this context.
 				initMessageSource();
 
+				//初始化当前ApplicationContext的时间广播器。
 				// Initialize event multicaster for this context.
 				initApplicationEventMulticaster();
 
+				//从方法名就可以知道，典型的模板方法(钩子方法)，
+				//具体的子类可以在这里初始化一些特殊的 Bean（在初始化 singleton beans 之前）
 				// Initialize other special beans in specific context subclasses.
 				onRefresh();
 
+				//注册事件监听器。
 				// Check for listener beans and register them.
 				registerListeners();
 
+				//初始化所有的 singleton beans
+				//（lazy-init的除外）
 				// Instantiate all remaining (non-lazy-init) singletons.
 				finishBeanFactoryInitialization(beanFactory);
 
+				// 最后，广播事件，ApplicationContext 初始化完成
 				// Last step: publish corresponding event.
 				finishRefresh();
 			}
@@ -566,6 +584,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 							"cancelling refresh attempt: " + ex);
 				}
 
+				//销毁已经初始化的 singleton 的 Beans，以免有些 bean 会一直占用资源
 				// Destroy already created singletons to avoid dangling resources.
 				destroyBeans();
 
